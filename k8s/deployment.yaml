@@ -19,6 +19,7 @@ rules:
       - nodes/status
     verbs:
       - get
+      - list
       - patch
       - update
   - apiGroups:
@@ -74,6 +75,7 @@ spec:
       labels:
         app.kubernetes.io/name: kove-extended-resource-controller
     spec:
+      serviceAccountName: kove-extended-resource-controller-sa
       priorityClassName: system-node-critical
       tolerations:
         - key: "node-role.kubernetes.io/master"

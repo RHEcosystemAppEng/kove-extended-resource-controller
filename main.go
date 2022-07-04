@@ -3,9 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"math"
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,8 +24,9 @@ import (
 
 const (
 	// ProgramName is the canonical name of this program
-	ProgramName         = "kove-service"
-	deviceCheckInterval = 10 * time.Second
+	ProgramName          = "kove-service"
+	deviceCheckInterval  = 10 * time.Second
+	extendedResourceName = "kove.net/memory"
 )
 
 type JsonPatch struct {
@@ -46,7 +50,7 @@ func main() {
 
 	kubeconfig, err := getKubeconfig()
 	if err != nil {
-		klog.Info("YEV - failed to get kubeconfig", "error", err)
+		klog.Info("Failed to get kubeconfig", "error", err)
 		os.Exit(2)
 	}
 
@@ -56,42 +60,43 @@ func main() {
 		os.Exit(2)
 	}
 
-	nodeName := os.Getenv("NODE_NAME")
-
-	node, err := clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, meta_v1.GetOptions{})
-	if err != nil {
-		klog.Info("failed to get node", "node", nodeName, "error", err)
-		os.Exit(2)
-	}
-
-	for a := range node.Annotations {
-		klog.Info("node annotations", "annotation", a)
-	}
-
-	patches := []JsonPatch{NewJsonPatch("add", "/status/capacity", "kove.net/memory", "1024Mi")}
-
-	data, err := json.Marshal(patches)
-	if err != nil {
-		klog.Info("failed to marshal patches", "error", err)
-		os.Exit(2)
-	}
-
-	_, err = clientset.CoreV1().Nodes().Patch(context.TODO(), nodeName, types.JSONPatchType, data, meta_v1.PatchOptions{}, "status")
-	if err != nil {
-		klog.Info("failed to patch node", "node", nodeName, "error", err)
-		os.Exit(2)
-	}
-
 	i := 0
 	for {
 		klog.Info("In main loop", "index", i)
 		i = i + 1
-		output, err := generateKoveUtil()
+		nodeList, err := clientset.CoreV1().Nodes().List(context.TODO(), meta_v1.ListOptions{})
 		if err != nil {
-			klog.Info("failed to generate kove memory from util ", "error ", err)
+			klog.Info("Failed to list nodes in the cluster", "error", err)
 			os.Exit(2)
 		}
-		klog.Info(fmt.Sprintf("Kove util memory in bytes: %s", output))
+
+		for _, node := range nodeList.Items {
+			quantity := node.Status.Allocatable.Name(extendedResourceName, resource.DecimalSI)
+			var newVal int64
+			klog.Info("Kove memory: %d", quantity.Value())
+
+			if quantity.Value() == math.MaxInt64 || quantity.IsZero() {
+				newVal = 1024
+			} else {
+				newVal = quantity.Value() - 5
+			}
+			klog.Info("NEW Kove memory: %d", newVal)
+			strNewVal := strconv.FormatInt(newVal, 10) + "Mi"
+			klog.Info("NEW Kove memory string: %s", strNewVal)
+			patches := []JsonPatch{NewJsonPatch("add", "/status/capacity", "kove.net/memory", strNewVal)}
+
+			data, err := json.Marshal(patches)
+			if err != nil {
+				klog.Info("failed to marshal patches", "error", err)
+				os.Exit(2)
+			}
+
+			_, err = clientset.CoreV1().Nodes().Patch(context.TODO(), node.Name, types.JSONPatchType, data, meta_v1.PatchOptions{}, "status")
+			if err != nil {
+				klog.Info("failed to patch node", "node", node.Name, "error", err)
+				os.Exit(2)
+			}
+		}
 		<-time.After(deviceCheckInterval)
 	}
 }
@@ -105,6 +110,8 @@ func NewJsonPatch(verb string, jsonpath string, key string, value string) JsonPa
 }
 
 func generateKoveUtil() ([]byte, error) {
-	cmd := exec.Command("go", "run", "./util")
-	return cmd.Output()
+	cmd := exec.Command("go", "run", "/util/kove.go")
+	res, err := cmd.Output()
+	fmt.Sprintf("Kove tmp memory: %s", string(res))
+	return res, err
 }
