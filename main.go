@@ -75,7 +75,6 @@ func main() {
 			quantity := node.Status.Allocatable.Name(extendedResourceName, resource.DecimalSI)
 			var newVal int64
 			var httpPatchAction string
-			klog.Info("Kove memory: ", quantity.Value())
 
 			if quantity.Value() == math.MaxInt64 {
 				// initial registration
@@ -89,9 +88,9 @@ func main() {
 					newVal = quantity.Value() - reduceFactor
 				}
 			}
-			klog.Info("NEW Kove memory: ", newVal)
+			klog.Info(fmt.Sprintf("Node: %s kove.net/memory | Before: %d  | After: %d", node.Name, quantity.Value(), newVal))
+
 			strNewVal := strconv.FormatInt(newVal, 10)
-			klog.Info("NEW Kove memory string: ", strNewVal)
 			patches := []JsonPatch{NewJsonPatch(httpPatchAction, "/status/capacity", "kove.net/memory", strNewVal)}
 
 			data, err := json.Marshal(patches)
