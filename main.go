@@ -27,6 +27,7 @@ const (
 	ProgramName          = "kove-service"
 	deviceCheckInterval  = 10 * time.Second
 	extendedResourceName = "kove.net/memory"
+	reduceFactor         = 150
 )
 
 type JsonPatch struct {
@@ -73,17 +74,25 @@ func main() {
 		for _, node := range nodeList.Items {
 			quantity := node.Status.Allocatable.Name(extendedResourceName, resource.DecimalSI)
 			var newVal int64
-			klog.Info("Kove memory: %d", quantity.Value())
+			var httpPatchAction string
+			klog.Info("Kove memory: ", quantity.Value())
 
-			if quantity.Value() == math.MaxInt64 || quantity.IsZero() {
+			if quantity.Value() == math.MaxInt64 {
+				// initial registration
 				newVal = 1024
+				httpPatchAction = "add"
 			} else {
-				newVal = quantity.Value() - 5
+				httpPatchAction = "replace"
+				if quantity.Value() < reduceFactor {
+					newVal = 1024
+				} else {
+					newVal = quantity.Value() - reduceFactor
+				}
 			}
-			klog.Info("NEW Kove memory: %d", newVal)
-			strNewVal := strconv.FormatInt(newVal, 10) + "Mi"
-			klog.Info("NEW Kove memory string: %s", strNewVal)
-			patches := []JsonPatch{NewJsonPatch("add", "/status/capacity", "kove.net/memory", strNewVal)}
+			klog.Info("NEW Kove memory: ", newVal)
+			strNewVal := strconv.FormatInt(newVal, 10)
+			klog.Info("NEW Kove memory string: ", strNewVal)
+			patches := []JsonPatch{NewJsonPatch(httpPatchAction, "/status/capacity", "kove.net/memory", strNewVal)}
 
 			data, err := json.Marshal(patches)
 			if err != nil {
