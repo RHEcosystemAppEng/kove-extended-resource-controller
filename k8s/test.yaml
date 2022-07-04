@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-kove-test-pod
+spec:
+  containers:
+    - image: nginx
+      name: nginx-kove-test-pod
+      ports:
+        - containerPort: 80
+          name: http
+      resources:
+        requests:
+          kove.net/memory: "500"
+          cpu: "10m"
+        limits:
+          kove.net/memory: "500"
+          cpu: "100m"
