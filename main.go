@@ -3,12 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"golang.org/x/net/context"
-	"k8s.io/apimachinery/pkg/util/json"
 	"os"
+	"os/exec"
 	"path"
 	"strings"
 	"time"
+
+	"golang.org/x/net/context"
+	"k8s.io/apimachinery/pkg/util/json"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -63,7 +65,7 @@ func main() {
 	}
 
 	for a := range node.Annotations {
-		klog.Info("node aanotations", "attotation", a)
+		klog.Info("node annotations", "annotation", a)
 	}
 
 	patches := []JsonPatch{NewJsonPatch("add", "/status/capacity", "kove.net/memory", "1024Mi")}
@@ -84,6 +86,12 @@ func main() {
 	for {
 		klog.Info("In main loop", "index", i)
 		i = i + 1
+		output, err := generateKoveUtil()
+		if err != nil {
+			klog.Info("failed to generate kove memory from util ", "error ", err)
+			os.Exit(2)
+		}
+		klog.Info(fmt.Sprintf("Kove util memory in bytes: %s", output))
 		<-time.After(deviceCheckInterval)
 	}
 }
@@ -94,4 +102,9 @@ func getKubeconfig() (*restclient.Config, error) {
 
 func NewJsonPatch(verb string, jsonpath string, key string, value string) JsonPatch {
 	return JsonPatch{verb, path.Join(jsonpath, strings.ReplaceAll(key, "/", "~1")), value}
+}
+
+func generateKoveUtil() ([]byte, error) {
+	cmd := exec.Command("go", "run", "./util")
+	return cmd.Output()
 }
