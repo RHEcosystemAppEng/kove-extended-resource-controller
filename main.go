@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"math"
 	"os"
 	"os/exec"
@@ -11,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"golang.org/x/net/context"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -28,6 +29,7 @@ const (
 	deviceCheckInterval  = 10 * time.Second
 	extendedResourceName = "kove.net/memory"
 	reduceFactor         = 150
+	masterNodeLabel      = "node-role.kubernetes.io/master"
 )
 
 type JsonPatch struct {
@@ -72,6 +74,9 @@ func main() {
 		}
 
 		for _, node := range nodeList.Items {
+			if _, ok := node.Labels[masterNodeLabel]; ok {
+				continue
+			}
 			quantity := node.Status.Allocatable.Name(extendedResourceName, resource.DecimalSI)
 			var newVal int64
 			var httpPatchAction string
