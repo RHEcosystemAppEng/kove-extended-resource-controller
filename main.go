@@ -29,7 +29,6 @@ const (
 	deviceCheckInterval  = 10 * time.Second
 	extendedResourceName = "kove.net/memory"
 	reduceFactor         = 150
-	masterNodeLabel      = "node-role.kubernetes.io/master"
 )
 
 type JsonPatch struct {
@@ -67,16 +66,13 @@ func main() {
 	for {
 		klog.Info("In main loop", "index", i)
 		i = i + 1
-		nodeList, err := clientset.CoreV1().Nodes().List(context.TODO(), meta_v1.ListOptions{})
+		nodeList, err := clientset.CoreV1().Nodes().List(context.TODO(), meta_v1.ListOptions{LabelSelector: "!node-role.kubernetes.io/master"})
 		if err != nil {
 			klog.Info("Failed to list nodes in the cluster", "error", err)
 			os.Exit(2)
 		}
 
 		for _, node := range nodeList.Items {
-			if _, ok := node.Labels[masterNodeLabel]; ok {
-				continue
-			}
 			quantity := node.Status.Allocatable.Name(extendedResourceName, resource.DecimalSI)
 			var newVal int64
 			var httpPatchAction string

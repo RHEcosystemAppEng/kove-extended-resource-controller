@@ -1,0 +1,8 @@
+apiVersion: "example.crd.com/v1alpha1"
+kind: "Locker"
+metadata:
+  name: "kove-memory-locker"
+  namespace: kube-system
+spec:
+  consumed: 33
+  allocatable: 44
