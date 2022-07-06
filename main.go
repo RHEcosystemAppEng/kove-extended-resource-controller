@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"math"
 	"os"
 	"os/exec"
@@ -11,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"golang.org/x/net/context"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -65,7 +66,7 @@ func main() {
 	for {
 		klog.Info("In main loop", "index", i)
 		i = i + 1
-		nodeList, err := clientset.CoreV1().Nodes().List(context.TODO(), meta_v1.ListOptions{})
+		nodeList, err := clientset.CoreV1().Nodes().List(context.TODO(), meta_v1.ListOptions{LabelSelector: "!node-role.kubernetes.io/master"})
 		if err != nil {
 			klog.Info("Failed to list nodes in the cluster", "error", err)
 			os.Exit(2)
