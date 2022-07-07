@@ -106,6 +106,46 @@ func main() {
 				os.Exit(2)
 			}
 		}
+
+		// ..........................................................................................
+		// patch := []byte(`{"spec":{"consumed": 99}}}`)
+		// _ = c.Patch(context.Background(), &corev1.Pod{
+		// 	ObjectMeta: meta_v1.ObjectMeta{
+		// 		Namespace: "kube-system",
+		// 		Name:      "kove-memory-locker",
+		// 	},
+		// }, client.RawPatch(types.StrategicMergePatchType, patch))
+
+		// ..........................................................................................
+		// u := &unstructured.Unstructured{}
+		// u.SetGroupVersionKind(schema.GroupVersionKind{
+		// 	Group:   "example.crd.com",
+		// 	Kind:    "Locker",
+		// 	Version: "v1alpha1",
+		// })
+		// _ = c.Get(context.Background(), client.ObjectKey{
+		// 	Namespace: "kube-system",
+		// 	Name:      "kove-memory-locker",
+		// }, u)
+		// u.SetFinalizers(append(u.GetFinalizers(), "new-finalizer"))
+		// _ = c.Update(context.Background(), u)
+
+		// ..........................................................................................
+		// u := &unstructured.Unstructured{}
+		// u.Object = map[string]interface{}{
+		// 	"metadata": map[string]interface{}{
+		// 		"name":      "kove-memory-locker",
+		// 		"namespace": "kube-system",
+		// 	},
+		// }
+		// u.SetGroupVersionKind(schema.GroupVersionKind{
+		// 	Group:   "example.crd.com",
+		// 	Kind:    "Locker",
+		// 	Version: "v1alpha1",
+		// })
+		// patch := []byte(fmt.Sprintf(`{"status":{"lastScheduleTime":"%s"}}`, time.Now().Format(time.RFC3339)))
+		// _ = c.Status().Patch(context.Background(), u, client.RawPatch(types.MergePatchType, patch))
+
 		<-time.After(deviceCheckInterval)
 	}
 }
